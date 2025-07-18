@@ -8,6 +8,7 @@
 /* FreeRTOS头文件 */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"	//消息队列
 
 /* 系统头文件 */
 #include "main.h"
@@ -24,6 +25,8 @@ static void AppTaskCreate(void);
 static void LED_Task(void* pvParameters);
 static void KEY_Task(void* pvParameters);
 static void RTOS_BSP_Init(void);
+static void Receive_Task(void* pvParameters);
+static void Send_Task(void* pvParameters);
 
 /**************************** 任务句柄 ********************************/
 /* 创建任务句柄 */
@@ -32,6 +35,30 @@ static TaskHandle_t AppTaskCreate_Handle = NULL;
 static TaskHandle_t LED_Task_Handle = NULL;
 /* KEY任务句柄 */
 static TaskHandle_t KEY_Task_Handle = NULL;
+/* 消息队列接收任务句柄 */
+static TaskHandle_t Receive_Task_Handle = NULL;
+/* 消息队列发送任务句柄 */
+static TaskHandle_t Send_Task_Handle = NULL;
+
+/********************************** 内核对象句柄 *********************************
+ * 信号量，消息队列，事件标志组，软件定时器这些都属于内核的对象，要想使用这些内核
+ * 对象，必须先创建，创建成功之后会返回一个相应的句柄。实际上就是一个指针，后续我
+ * 们就可以通过这个句柄操作这些内核对象。
+ *
+ * 内核对象说白了就是一种全局的数据结构，通过这些数据结构我们可以实现任务间的通信，
+ * 任务间的事件同步等各种功能。至于这些功能的实现我们是通过调用这些内核对象的函数
+ * 来完成的
+ *******************************************************************************/
+QueueHandle_t Test_Queue =NULL;		//队列句柄
+
+/******************************* 全局变量声明 ************************************/
+
+
+/******************************* 宏定义 *****************************************/
+/* 队列的长度，最大可包含多少个消息 */
+#define  QUEUE_LEN    4
+/* 队列中每个消息大小（字节） */
+#define  QUEUE_SIZE   4
 
 /******************************* 静态内存分配 ************************************/
 /* AppTaskCreate任务堆栈 */
@@ -66,12 +93,16 @@ static StaticTask_t Timer_Task_TCB;
  */
 void FreeRTOS_App_Init(void)
 {
+    BaseType_t xReturn = pdPASS;	/* 定义一个创建消息队列返回值，默认为pdPASS */
+
     /* 板级外设初始化 */
     RTOS_BSP_Init();
 
-    printf("This is a test about task management\r\n");
-    printf("push KEY1 to suspend task, pull KEY2 to resume task\n");
+    printf("This is a test about message queue:\r\n");
+    printf("1.press KEY1 or KEY2 to send queue msg\n");
+    printf("2.Receive task will show msg in uart if received msg\n\n");
 
+#if 0 // 静态创建任务，用于任务管理实验
     /* 创建 AppTaskCreate 任务 */
     AppTaskCreate_Handle = xTaskCreateStatic(
         (TaskFunction_t)AppTaskCreate,      // 任务函数
@@ -86,17 +117,32 @@ void FreeRTOS_App_Init(void)
     if(NULL != AppTaskCreate_Handle) {
         printf("AppTaskCreate successful\r\n");
 #if 0 // 会与 main() 中的oskelnelStart()函数冲突
-        /* 启动任务，开启调度 */
-        vTaskStartScheduler();
+        vTaskStartScheduler();	/* 启动任务，开启调度 */
 #endif
     } else {
         printf("AppTaskCreate failure\r\n");
     }
+#endif
 
-    /* 正常不会执行到这里 */
-    while(1) {
-        // 调度器启动失败才会到这里
-    }
+#if 1 // 动态创建任务，用于消息队列实验
+       /* 创建AppTaskCreate任务 */
+      xReturn = xTaskCreate((TaskFunction_t )AppTaskCreate,  /* 任务入口函数 */
+                            (const char*    )"AppTaskCreate",/* 任务名字 */
+                            (uint16_t       )512,  /* 任务栈大小 */
+                            (void*          )NULL,/* 任务入口函数参数 */
+                            (UBaseType_t    )1, /* 任务的优先级 */
+                            (TaskHandle_t*  )&AppTaskCreate_Handle);/* 任务控制块指针 */
+      /* 检查创建任务是否成功 */
+      if(pdPASS == xReturn)
+      {
+          printf("AppTaskCreate successful\r\n");
+//        vTaskStartScheduler();   /* 启动任务，开启调度 */
+      }
+      else
+      {
+    	  printf("AppTaskCreate failure\r\n");
+      }
+#endif
 }
 
 /**
@@ -107,6 +153,7 @@ void FreeRTOS_App_Init(void)
  */
 static void AppTaskCreate(void)
 {
+#if 0 // 任务管理实验
     taskENTER_CRITICAL();  // 进入临界区
 
     /* 创建LED_Task任务 */
@@ -146,6 +193,40 @@ static void AppTaskCreate(void)
     vTaskDelete(AppTaskCreate_Handle);  // 删除AppTaskCreate任务
 
     taskEXIT_CRITICAL();  // 退出临界区
+#endif
+    BaseType_t xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+
+    taskENTER_CRITICAL();           // 进入临界区
+
+    /* 创建Test_Queue */
+    Test_Queue = xQueueCreate((UBaseType_t ) QUEUE_LEN,		/* 消息队列的长度 */
+                              (UBaseType_t ) QUEUE_SIZE);	/* 消息的大小 */
+    if(NULL != Test_Queue)
+      printf("create Test_Queue successful\r\n");
+
+    /* 创建Receive_Task任务 */
+    xReturn = xTaskCreate((TaskFunction_t )Receive_Task, 	/* 任务入口函数 */
+                          (const char*    )"Receive_Task",	/* 任务名字 */
+                          (uint16_t       )512,   			/* 任务栈大小 */
+                          (void*          )NULL,			/* 任务入口函数参数 */
+                          (UBaseType_t    )2,	    		/* 任务的优先级 */
+                          (TaskHandle_t*  )&Receive_Task_Handle);	/* 任务控制块指针 */
+    if(pdPASS == xReturn)
+      printf("create Receive_Task successful\r\n");
+
+    /* 创建Send_Task任务 */
+    xReturn = xTaskCreate((TaskFunction_t )Send_Task,  /* 任务入口函数 */
+                          (const char*    )"Send_Task",/* 任务名字 */
+                          (uint16_t       )512,  /* 任务栈大小 */
+                          (void*          )NULL,/* 任务入口函数参数 */
+                          (UBaseType_t    )3, /* 任务的优先级 */
+                          (TaskHandle_t*  )&Send_Task_Handle);/* 任务控制块指针 */
+    if(pdPASS == xReturn)
+      printf("create Send_Task successful\n\n");
+
+    vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
+
+    taskEXIT_CRITICAL();            //退出临界区
 }
 
 /**
@@ -188,6 +269,69 @@ static void KEY_Task(void* parameter)
         }
         vTaskDelay(20);/* 延时20个tick */
     }
+}
+
+/**********************************************************************
+  * @ 函数名  ： Receive_Task
+  * @ 功能说明： 读消息队列：Receive_Task任务主体
+  * @ 参数    ：
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void Receive_Task(void* parameter)
+{
+  BaseType_t 	xReturn = pdTRUE;	/* 定义一个创建信息返回值，默认为pdTRUE */
+  uint32_t 		r_queue;			/* 定义一个接收消息的变量 */
+
+  while (1)
+  {
+    xReturn = xQueueReceive( Test_Queue,    /* 消息队列的句柄 */
+                             &r_queue,      /* 发送的消息内容 */
+                             portMAX_DELAY); /* 等待时间 一直等 */
+    if(pdTRUE == xReturn)
+      printf("Receive data: %ld\n\n", r_queue);
+    else
+      printf("Receive error: 0x%lx\n", xReturn);
+  }
+}
+
+/**********************************************************************
+  * @ 函数名  ： Send_Task
+  * @ 功能说明： 写消息队列：Send_Task任务主体
+  * @ 参数    ：
+  * @ 返回值  ： 无
+  ********************************************************************/
+static void Send_Task(void* parameter)
+{
+  BaseType_t 	xReturn = pdPASS;/* 定义一个创建信息返回值，默认为pdPASS */
+  uint32_t 		send_data1 = 1;
+  uint32_t 		send_data2 = 2;
+
+  while (1)
+  {
+	/* K1 被按下 */
+    if( Key_Scan(KEY1_GPIO_PORT, KEY1_GPIO_PIN) == KEY_ON )
+    {
+      printf("Send_data1...\n");
+      xReturn = xQueueSend( Test_Queue, /* 消息队列的句柄 */
+                            &send_data1,/* 发送的消息内容 */
+                            0 );        /* 等待时间 0 */
+      if(pdPASS == xReturn)
+        printf("Send_data1 successfully!\n\n");
+    }
+
+    /* K2 被按下 */
+    if( Key_Scan(KEY2_GPIO_PORT,KEY2_GPIO_PIN) == KEY_ON )
+    {
+      printf("Send_data2...\n");
+      xReturn = xQueueSend( Test_Queue, /* 消息队列的句柄 */
+                            &send_data2,/* 发送的消息内容 */
+                            0 );        /* 等待时间 0 */
+      if(pdPASS == xReturn)
+        printf("Send_data2 successfully!\n\n");
+    }
+
+    vTaskDelay(20);/* 延时20个tick */
+  }
 }
 
 /**

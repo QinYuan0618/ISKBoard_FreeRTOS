@@ -1,7 +1,9 @@
-../Core/Src/mycore/core.c:67:6:FreeRTOS_App_Init	24	static
-../Core/Src/mycore/core.c:108:13:AppTaskCreate	24	static
-../Core/Src/mycore/core.c:156:13:LED_Task	16	static
-../Core/Src/mycore/core.c:174:13:KEY_Task	16	static
-../Core/Src/mycore/core.c:199:13:RTOS_BSP_Init	8	static
-../Core/Src/mycore/core.c:223:6:vApplicationGetIdleTaskMemory	24	static
-../Core/Src/mycore/core.c:239:6:vApplicationGetTimerTaskMemory	24	static
+../Core/Src/mycore/core.c:94:6:FreeRTOS_App_Init	24	static
+../Core/Src/mycore/core.c:154:13:AppTaskCreate	24	static
+../Core/Src/mycore/core.c:237:13:LED_Task	16	static
+../Core/Src/mycore/core.c:255:13:KEY_Task	16	static
+../Core/Src/mycore/core.c:280:13:Receive_Task	24	static
+../Core/Src/mycore/core.c:303:13:Send_Task	32	static
+../Core/Src/mycore/core.c:343:13:RTOS_BSP_Init	8	static
+../Core/Src/mycore/core.c:367:6:vApplicationGetIdleTaskMemory	24	static
+../Core/Src/mycore/core.c:383:6:vApplicationGetTimerTaskMemory	24	static

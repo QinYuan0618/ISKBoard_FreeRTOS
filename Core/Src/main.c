@@ -105,9 +105,8 @@ int main(void)
   MX_FREERTOS_Init();
 
   /* Start scheduler */
-  printf("\n Start scheduler \n");
+  printf("--- Start scheduler use func osKernelStart in main ---\n");
   osKernelStart();
-  printf("\n have Started scheduler \n");
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */

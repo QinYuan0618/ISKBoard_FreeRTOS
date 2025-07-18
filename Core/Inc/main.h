@@ -59,6 +59,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define RGB_Blue_Pin GPIO_PIN_2
 #define RGB_Blue_GPIO_Port GPIOB
+#define Key1_Pin GPIO_PIN_12
+#define Key1_GPIO_Port GPIOB
+#define Key2_Pin GPIO_PIN_13
+#define Key2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

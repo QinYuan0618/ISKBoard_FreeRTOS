@@ -1,0 +1,7 @@
+../Core/Src/mycore/core.c:67:6:FreeRTOS_App_Init	2
+../Core/Src/mycore/core.c:108:13:AppTaskCreate	3
+../Core/Src/mycore/core.c:156:13:LED_Task	1
+../Core/Src/mycore/core.c:174:13:KEY_Task	3
+../Core/Src/mycore/core.c:199:13:RTOS_BSP_Init	1
+../Core/Src/mycore/core.c:223:6:vApplicationGetIdleTaskMemory	1
+../Core/Src/mycore/core.c:239:6:vApplicationGetTimerTaskMemory	1

@@ -24,7 +24,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "core.h"
+#include "miscdev.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,6 +95,9 @@ int main(void)
 
   printf("Welcome to FreeRTOS test project!\r\n");
 
+  /* 启动FreeRTOS应用 */
+  FreeRTOS_App_Init();
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -101,8 +105,9 @@ int main(void)
   MX_FREERTOS_Init();
 
   /* Start scheduler */
+  printf("\n Start scheduler \n");
   osKernelStart();
-
+  printf("\n have Started scheduler \n");
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
